@@ -1,0 +1,5 @@
+{
+  "name": "Holmes on Code: Veo Director",
+  "description": "An agentic video generation dashboard that orchestrates Google Veo to visualize 'Holmes on Homes' parody scripts using a hierarchical agent topology.",
+  "requestFramePermissions": []
+}
