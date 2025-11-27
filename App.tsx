@@ -57,6 +57,13 @@ export default function App() {
   // Check API Key on Mount
   useEffect(() => {
     const checkKey = async () => {
+      // 1. Check environment variable first
+      if (process.env.API_KEY) {
+        setApiKeyReady(true);
+        return;
+      }
+
+      // 2. Check for AI Studio environment
       // Cast to any to avoid TS errors if definitions are missing or incorrect
       if ((window as any).aistudio && await (window as any).aistudio.hasSelectedApiKey()) {
         setApiKeyReady(true);
@@ -68,8 +75,13 @@ export default function App() {
   const handleSelectKey = async () => {
     if ((window as any).aistudio) {
       await (window as any).aistudio.openSelectKey();
-      // Assume success to mitigate race condition
-      setApiKeyReady(true);
+      // Verify state to avoid race condition or cancellation
+      const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+      if (hasKey) {
+        setApiKeyReady(true);
+      }
+    } else {
+      alert("AI Studio environment not detected. Please set GEMINI_API_KEY in your .env file.");
     }
   };
 
@@ -175,12 +187,15 @@ export default function App() {
           (log) => addLog(log.role, log.message, log.status)
         );
 
-        // Fetch the video blob with API key appended
-        const videoUrlWithKey = `${videoResult.uri}&key=${process.env.API_KEY}`;
+        console.log('--- VEO GENERATION RESULT ---');
+        console.log('Scene ID:', currentScene.id);
+        console.log('Video URI:', videoResult.uri);
+        console.log('Full Result:', videoResult);
+        console.log('-----------------------------');
 
         // Update Scene with Video
         const updatedSceneData = {
-          videoUri: videoUrlWithKey,
+          videoUri: videoResult.uri, // Use raw URI (likely a signed GCS URL)
           videoHandle: videoResult.handle, // Store for next iteration
           status: SceneStatus.COMPLETED
         };

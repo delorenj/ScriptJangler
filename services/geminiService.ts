@@ -2,8 +2,14 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { ScriptScene, AgentLog, AgentRole } from "../types";
 
 // Helper to get client safely
-const getClient = () => {
-  const apiKey = process.env.API_KEY;
+const getClient = async () => {
+  let apiKey = process.env.API_KEY;
+  
+  // Attempt to retrieve from window.aistudio (Project IDX / AI Studio environment)
+  if (!apiKey && typeof window !== 'undefined' && (window as any).aistudio) {
+      apiKey = await (window as any).aistudio.getApiKey();
+  }
+
   if (!apiKey) throw new Error("API Key not found");
   return new GoogleGenAI({ apiKey });
 };
@@ -12,7 +18,7 @@ const getClient = () => {
  * PARSER AGENT: Converts raw markdown script into structured JSON scenes.
  */
 export const parseScriptWithGemini = async (rawText: string): Promise<ScriptScene[]> => {
-  const ai = getClient();
+  const ai = await getClient();
   
   const prompt = `
     You are a Script Parsing Agent. 
@@ -69,7 +75,7 @@ export const checkContinuity = async (
     return { shouldExtend: false, reasoning: "First scene, nothing to extend." };
   }
 
-  const ai = getClient();
+  const ai = await getClient();
   
   const prompt = `
     You are a Continuity QA Agent for video production.
@@ -109,7 +115,7 @@ export const checkContinuity = async (
  * STAGE HAND AGENT: Generates a starting frame using Gemini Flash Image (Nano Banana).
  */
 export const generateStageHandImage = async (visualPrompt: string): Promise<string> => {
-  const ai = getClient();
+  const ai = await getClient();
   
   // Using nano banana series for image generation as requested
   const response = await ai.models.generateContent({
@@ -170,7 +176,7 @@ export const generateVeoVideo = async (
   imageBase64: string | undefined, // New: Input image for Veo
   logCallback: (log: AgentLog) => void
 ): Promise<{ uri: string; handle: any }> => {
-  const ai = getClient();
+  const ai = await getClient();
   
   // Veo logic: 
   // - If extending: Must use 'veo-3.1-generate-preview' (720p).

@@ -15,13 +15,19 @@ export const ReelPlayer: React.FC<ReelPlayerProps> = ({ scenes, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [opacity, setOpacity] = useState(1);
+  const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    // Reset error on index change
+    setError(null);
     // Auto-play when component mounts or index changes
     const video = videoRef.current;
     if (video) {
-      video.play().catch(e => console.error("Autoplay failed:", e));
+      video.play().catch(e => {
+        console.error("Autoplay failed:", e);
+        // Don't set error here immediately as it might just be autoplay policy
+      });
       setIsPlaying(true);
     }
   }, [currentIndex]);
@@ -60,6 +66,17 @@ export const ReelPlayer: React.FC<ReelPlayerProps> = ({ scenes, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-in fade-in duration-300">
+      {/* DEBUG OVERLAY */}
+      <div className="absolute top-20 left-6 z-50 bg-black/80 text-green-400 p-4 font-mono text-xs border border-green-800 rounded max-w-md overflow-hidden break-all">
+        <h4 className="font-bold text-white mb-2">DEBUG INFO</h4>
+        <p><span className="text-zinc-500">Scene ID:</span> {currentScene.id}</p>
+        <p><span className="text-zinc-500">Status:</span> {currentScene.status}</p>
+        <p><span className="text-zinc-500">URI:</span> {currentScene.videoUri}</p>
+        <p><span className="text-zinc-500">Opacity:</span> {opacity}</p>
+        <p><span className="text-zinc-500">Error:</span> {error || 'None'}</p>
+        <p><span className="text-zinc-500">Player Ready:</span> {videoRef.current?.readyState}</p>
+      </div>
+
       {/* Player Container */}
       <div className="relative w-full h-full max-w-7xl max-h-screen flex items-center justify-center">
         <video
@@ -68,11 +85,20 @@ export const ReelPlayer: React.FC<ReelPlayerProps> = ({ scenes, onClose }) => {
           className="max-w-full max-h-full transition-opacity duration-500 ease-in-out"
           style={{ opacity: opacity }}
           onEnded={handleVideoEnd}
+          onLoadStart={() => console.log('Video LoadStart:', currentScene.videoUri)}
+          onLoadedData={() => console.log('Video LoadedData')}
+          onCanPlay={() => console.log('Video CanPlay')}
+          onError={(e) => {
+            const target = e.target as HTMLVideoElement;
+            const err = target.error;
+            console.error('Video Error Event:', err);
+            setError(`Error code: ${err?.code} - ${err?.message || 'Unknown error loading video resource'}`);
+          }}
           onClick={() => {
             if (videoRef.current?.paused) videoRef.current.play();
             else videoRef.current?.pause();
           }}
-          controls={false} // Custom controls or click to pause
+          controls={true} // Enable default controls for debugging
         />
         
         {/* Overlay Info (Briefly shows scene info on start or hover) */}
